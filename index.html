@@ -3,244 +3,620 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idle Truck Tycoon 🚛</title>
+<title>Idle Truck Tycoon Pro 🚛</title>
 
 <style>
 body{
   margin:0;
-  font-family:Arial, sans-serif;
-  background:#111827;
+  font-family:system-ui, sans-serif;
+  background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color:white;
+  min-height:100vh;
 }
 
-h1{text-align:center;margin:10px 0}
+h1{text-align:center;margin:10px 0;text-shadow:0 2px 4px rgba(0,0,0,0.5)}
 
-.money{text-align:center;font-size:1.4em}
+.money{
+  text-align:center;
+  font-size:1.4em;
+  background:#1f2937;
+  padding:15px;
+  margin:10px;
+  border-radius:12px;
+  box-shadow:0 4px 6px rgba(0,0,0,0.3);
+}
 
 .container{
   display:flex;
   flex-direction:column;
   gap:10px;
   padding:10px;
+  max-width:600px;
+  margin:0 auto;
 }
 
 .card{
   background:#1f2937;
   border-radius:12px;
-  padding:12px;
+  padding:15px;
+  box-shadow:0 4px 6px rgba(0,0,0,0.2);
+  border:1px solid #374151;
 }
 
 button{
   width:100%;
-  padding:10px;
-  margin-top:6px;
+  padding:12px;
+  margin-top:8px;
   border:none;
   border-radius:8px;
-  background:#22c55e;
+  background:linear-gradient(135deg, #22c55e, #16a34a);
   color:white;
   font-size:1em;
+  cursor:pointer;
+  transition:transform 0.1s, box-shadow 0.2s;
+}
+
+button:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(34,197,94,0.4);
 }
 
 button:disabled{
-  background:#555;
+  background:#374151;
+  cursor:not-allowed;
+  opacity:0.6;
 }
 
 select{
   width:100%;
-  padding:8px;
+  padding:10px;
   border-radius:8px;
+  background:#111827;
+  color:white;
+  border:1px solid #374151;
 }
 
 #map{
   position:relative;
-  height:180px;
+  height:200px;
   border-radius:12px;
-  background:linear-gradient(#2563eb,#0f172a);
+  background:linear-gradient(135deg, #1e40af 0%, #0f172a 100%);
   overflow:hidden;
+  border:2px solid #374151;
 }
 
 .city{
   position:absolute;
-  font-size:0.8em;
-  background:#111827cc;
-  padding:4px 6px;
-  border-radius:6px;
+  font-size:0.85em;
+  background:#111827;
+  padding:6px 10px;
+  border-radius:8px;
   cursor:pointer;
+  border:2px solid #4b5563;
+  transition:all 0.3s;
 }
 
 .city.active{
   background:#22c55e;
+  border-color:#16a34a;
+  box-shadow:0 0 15px rgba(34,197,94,0.5);
+}
+
+.city.locked{
+  opacity:0.5;
+  cursor:not-allowed;
+  background:#374151;
+}
+
+.truck-path{
+  position:absolute;
+  bottom:20px;
+  left:20px;
+  right:20px;
+  height:4px;
+  background:#374151;
+  border-radius:2px;
 }
 
 .truck{
   position:absolute;
-  font-size:20px;
-  animation:drive linear infinite;
+  bottom:10px;
+  font-size:24px;
+  transition:left 0.5s linear;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
-@keyframes drive{
-  from{transform:translateX(0)}
-  to{transform:translateX(120px)}
+.stats-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  font-size:0.9em;
+  color:#9ca3af;
+}
+
+.upgrade-btn{
+  background:linear-gradient(135deg, #3b82f6, #2563eb);
+  font-size:0.9em;
+  padding:8px;
+}
+
+.upgrade-btn:hover:not(:disabled){
+  box-shadow:0 4px 12px rgba(59,130,246,0.4);
+}
+
+.progress-bar{
+  width:100%;
+  height:6px;
+  background:#374151;
+  border-radius:3px;
+  margin-top:8px;
+  overflow:hidden;
+}
+
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg, #22c55e, #16a34a);
+  width:0%;
+  transition:width 0.3s;
+}
+
+.achievement{
+  position:fixed;
+  top:20px;
+  right:-300px;
+  background:linear-gradient(135deg, #f59e0b, #d97706);
+  padding:15px 20px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  transition:right 0.5s;
+  z-index:1000;
+}
+
+.achievement.show{
+  right:20px;
+}
+
+/* Animation för inkomst */
+@keyframes moneyPulse {
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.05)}
+}
+
+.money-update{
+  animation:moneyPulse 0.3s;
+  color:#22c55e;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🚛 Idle Truck Tycoon</h1>
-<div class="money">💰 $<span id="money">10</span> | 💸 <span id="income">0</span>/sek</div>
+<h1>🚛 Idle Truck Tycoon Pro</h1>
+<div class="money" id="moneyCard">
+  💰 $<span id="money">10</span> | 
+  💸 <span id="income">0</span>/sek |
+  🏆 Nivå <span id="level">1</span>
+</div>
 
 <div class="container">
 
 <!-- MAP -->
 <div class="card">
-<h3>🗺️ Karta</h3>
+<h3>🗺️ Karta <span style="float:right;font-size:0.8em;color:#9ca3af">Klicka för att resa</span></h3>
 <div id="map">
-  <div class="city active" style="top:20px;left:20px" onclick="selectCity('stockholm')">🏙️ Stockholm</div>
-  <div class="city" style="top:100px;left:80px" onclick="selectCity('gothenburg')">🌉 Göteborg</div>
-  <div class="city" style="top:40px;left:180px" onclick="selectCity('berlin')">🌍 Berlin</div>
+  <div class="truck-path"></div>
+  <div class="city active" id="city-stockholm" style="top:20px;left:20px" onclick="selectCity('stockholm')">
+    🏙️ Stockholm<br><small>1x inkomst</small>
+  </div>
+  <div class="city locked" id="city-gothenburg" style="top:100px;left:80px" onclick="selectCity('gothenburg')">
+    🌉 Göteborg<br><small>1.5x inkomst<br>🔒 $500</small>
+  </div>
+  <div class="city locked" id="city-berlin" style="top:40px;left:180px" onclick="selectCity('berlin')">
+    🌍 Berlin<br><small>2.5x inkomst<br>🔒 $2000</small>
+  </div>
 </div>
-<p>Vald stad: <b><span id="cityName">Stockholm</span></b></p>
+<p>Vald stad: <b><span id="cityName">Stockholm</span></b> 
+   <span id="travelStatus" style="color:#9ca3af;font-size:0.9em"></span></p>
+<div class="progress-bar"><div class="progress-fill" id="travelProgress"></div></div>
 </div>
 
 <!-- ROUTE -->
 <div class="card">
-<h3>🛣️ Rutt</h3>
+<h3>🛣️ Rutt-strategi</h3>
 <select id="route">
-  <option value="1">🏙️ Stad</option>
-  <option value="1.5">🛣️ Motorväg</option>
-  <option value="2">🌍 Internationell</option>
+  <option value="1">🏙️ Lokal (Säker, 1x)</option>
+  <option value="1.8">🛣️ E4:an (Risk 10%, 1.8x)</option>
+  <option value="3">🌍 Autobahn (Risk 25%, 3x)</option>
 </select>
+<p style="font-size:0.85em;color:#9ca3af;margin-top:5px">
+  Risk = chans för förseningar som pausar inkomst i 5-30 sekunder
+</p>
 </div>
 
 <!-- TRUCKS -->
-<div class="card">
-<h3>🚚 Volvo FH</h3>
-<p>1$/sek | Ägda: <span id="volvo">0</span></p>
-<button onclick="buy('volvo')">Köp ($10)</button>
+<div class="card" id="volvo-card">
+<h3>🚚 Volvo FH <span style="float:right;font-size:0.8em">⚡ <span id="volvo-efficiency">100</span>% effektivitet</span></h3>
+<div class="stats-grid">
+  <span>💵 $<span id="volvo-income">1</span>/sek</span>
+  <span>📦 Ägda: <span id="volvo">0</span></span>
+</div>
+<button onclick="buy('volvo')" id="volvo-btn">Köp ($<span id="volvo-cost">10</span>)</button>
+<button class="upgrade-btn" onclick="upgrade('volvo')" id="volvo-upgrade">🔧 Uppgradera ($<span id="volvo-upgrade-cost">50</span>)</button>
 </div>
 
-<div class="card">
-<h3>🚛 Scania R</h3>
-<p>5$/sek | Ägda: <span id="scania">0</span></p>
-<button onclick="buy('scania')">Köp ($50)</button>
+<div class="card" id="scania-card">
+<h3>🚛 Scania R <span style="float:right;font-size:0.8em">⚡ <span id="scania-efficiency">100</span>%</span></h3>
+<div class="stats-grid">
+  <span>💵 $<span id="scania-income">5</span>/sek</span>
+  <span>📦 Ägda: <span id="scania">0</span></span>
+</div>
+<button onclick="buy('scania')" id="scania-btn">Köp ($<span id="scania-cost">50</span>)</button>
+<button class="upgrade-btn" onclick="upgrade('scania')" id="scania-upgrade">🔧 Uppgradera ($<span id="scania-upgrade-cost">250</span>)</button>
 </div>
 
-<div class="card">
-<h3>🚐 MAN TGX</h3>
-<p>15$/sek | Ägda: <span id="man">0</span></p>
-<button onclick="buy('man')">Köp ($150)</button>
+<div class="card" id="man-card">
+<h3>🚐 MAN TGX <span style="float:right;font-size:0.8em">⚡ <span id="man-efficiency">100</span>%</span></h3>
+<div class="stats-grid">
+  <span>💵 $<span id="man-income">15</span>/sek</span>
+  <span>📦 Ägda: <span id="man">0</span></span>
+</div>
+<button onclick="buy('man')" id="man-btn">Köp ($<span id="man-cost">150</span>)</button>
+<button class="upgrade-btn" onclick="upgrade('man')" id="man-upgrade">🔧 Uppgradera ($<span id="man-upgrade-cost">750</span>)</button>
 </div>
 
+<!-- STATS -->
+<div class="card">
+<h3>📊 Statistik</h3>
+<div class="stats-grid">
+  <span>⏱️ Speltid: <span id="playtime">0</span>m</span>
+  <span>🎯 Affärer: <span id="totalDeliveries">0</span></span>
+  <span>💸 Total inkomst: $<span id="totalEarned">0</span></span>
+  <span>🚛 Flottstorlek: <span id="fleetSize">0</span></span>
+</div>
+</div>
+
+</div>
+
+<div class="achievement" id="achievement">
+  🏆 <b>Achievement!</b><br>
+  <span id="achievement-text"></span>
 </div>
 
 <script>
 /* ===== DATA ===== */
-let money = +localStorage.money || 10;
-let lastTime = +localStorage.lastTime || Date.now();
-let route = +localStorage.route || 1;
-let city = localStorage.city || "stockholm";
-
-const cities={
-  stockholm:{name:"Stockholm",mult:1,travel:1},
-  gothenburg:{name:"Göteborg",mult:1.5,travel:3},
-  berlin:{name:"Berlin",mult:2.5,travel:6}
+const game = {
+  money: 10,
+  totalEarned: 0,
+  startTime: Date.now(),
+  lastSave: Date.now(),
+  route: 1,
+  city: 'stockholm',
+  level: 1,
+  totalDeliveries: 0,
+  riskEvent: null // Aktiv försening
 };
 
-const trucks={
-  volvo:{count:+localStorage.volvo||0,base:1,icon:"🚚"},
-  scania:{count:+localStorage.scania||0,base:5,icon:"🚛"},
-  man:{count:+localStorage.man||0,base:15,icon:"🚐"}
+const cities = {
+  stockholm: { name: "Stockholm", mult: 1, travel: 2, cost: 0, unlocked: true },
+  gothenburg: { name: "Göteborg", mult: 1.5, travel: 4, cost: 500, unlocked: false },
+  berlin: { name: "Berlin", mult: 2.5, travel: 8, cost: 2000, unlocked: false }
 };
 
-/* ===== OFFLINE ===== */
-let diff=Math.floor((Date.now()-lastTime)/1000);
-money+=diff*income();
-
-/* ===== INCOME ===== */
-function income(){
-  let total=0;
-  for(let t in trucks){
-    total+=trucks[t].count*trucks[t].base;
+const trucks = {
+  volvo: { 
+    count: 0, 
+    base: 1, 
+    icon: "🚚", 
+    cost: 10, 
+    efficiency: 1,
+    upgradeCost: 50,
+    upgradeLevel: 1
+  },
+  scania: { 
+    count: 0, 
+    base: 5, 
+    icon: "🚛", 
+    cost: 50, 
+    efficiency: 1,
+    upgradeCost: 250,
+    upgradeLevel: 1
+  },
+  man: { 
+    count: 0, 
+    base: 15, 
+    icon: "🚐", 
+    cost: 150, 
+    efficiency: 1,
+    upgradeCost: 750,
+    upgradeLevel: 1
   }
-  return Math.floor(total*route*cities[city].mult);
+};
+
+const achievements = [
+  { id: 'first_truck', name: 'Första lastbilen', condition: () => totalTrucks() >= 1, shown: false },
+  { id: 'fleet_10', name: 'Liten flotta', condition: () => totalTrucks() >= 10, shown: false },
+  { id: 'rich_1000', name: 'Affärsman', condition: () => game.money >= 1000, shown: false },
+  { id: 'globetrotter', name: 'Globetrotter', condition: () => game.city === 'berlin', shown: false },
+  { id: 'upgrade_master', name: 'Mekaniker', condition: () => totalUpgrades() >= 5, shown: false }
+];
+
+/* ===== INIT ===== */
+function init() {
+  loadGame();
+  calculateOfflineIncome();
+  updateUI();
+  startGameLoop();
+  startAnimationLoop();
 }
 
-/* ===== BUY ===== */
-function buy(t){
-  const cost={volvo:10,scania:50,man:150}[t];
-  if(money>=cost){
-    money-=cost;
-    trucks[t].count++;
-    drawTrucks();
-    save(); ui();
-  }
+function totalTrucks() {
+  return Object.values(trucks).reduce((a, b) => a + b.count, 0);
 }
 
-/* ===== MAP ===== */
-function drawTrucks(){
-  document.querySelectorAll(".truck").forEach(t=>t.remove());
-  for(let t in trucks){
-    for(let i=0;i<trucks[t].count;i++){
-      let d=document.createElement("div");
-      d.className="truck";
-      d.textContent=trucks[t].icon;
-      d.style.left="20px";
-      d.style.top=(140+Math.random()*20)+"px";
-      d.style.animationDuration=(cities[city].travel*2)+"s";
-      map.appendChild(d);
+function totalUpgrades() {
+  return Object.values(trucks).reduce((a, b) => a + b.upgradeLevel - 1, 0);
+}
+
+/* ===== OFFLINE INCOME (FIXAD) ===== */
+function calculateOfflineIncome() {
+  const now = Date.now();
+  const offlineSeconds = Math.floor((now - game.lastSave) / 1000);
+  
+  if (offlineSeconds > 5 && totalTrucks() > 0) {
+    // Beräkna baserat på sparad stad och rutt
+    const savedCity = cities[game.city];
+    const offlineIncome = Math.floor(
+      income() * Math.min(offlineSeconds, 7200) // Max 2 timmar offline
+    );
+    
+    if (offlineIncome > 0) {
+      game.money += offlineIncome;
+      game.totalEarned += offlineIncome;
+      showAchievement(`Tjänade $${offlineIncome} medan du var borta!`);
     }
   }
 }
 
-function selectCity(c){
-  city=c;
-  document.querySelectorAll(".city").forEach(el=>el.classList.remove("active"));
-  event.target.classList.add("active");
-  save(); ui(); drawTrucks();
+/* ===== INCOME ===== */
+function income() {
+  if (game.riskEvent) return 0; // Paus vid försening
+  
+  let total = 0;
+  for (let t in trucks) {
+    total += trucks[t].count * trucks[t].base * trucks[t].efficiency;
+  }
+  
+  // Risk-baserad route
+  const routeRisk = {
+    1: { mult: 1, risk: 0 },
+    1.8: { mult: 1.8, risk: 0.1 },
+    3: { mult: 3, risk: 0.25 }
+  }[game.route];
+  
+  // Kolla risk
+  if (Math.random() < routeRisk.risk / 60) { // Chans per sekund
+    triggerRiskEvent();
+  }
+  
+  return Math.floor(total * routeRisk.mult * cities[game.city].mult);
 }
 
-/* ===== SAVE ===== */
-function save(){
-  localStorage.money=money;
-  localStorage.lastTime=Date.now();
-  localStorage.route=route;
-  localStorage.city=city;
-  for(let t in trucks){
-    localStorage[t]=trucks[t].count;
+function triggerRiskEvent() {
+  const duration = 5000 + Math.random() * 25000; // 5-30 sek
+  game.riskEvent = setTimeout(() => {
+    game.riskEvent = null;
+    showAchievement("🚨 Problem löst! Trafiken flyter igen.");
+  }, duration);
+  
+  showAchievement("🚨 Trafikkaos! Inkomst pausad...");
+}
+
+/* ===== BUY ===== */
+function buy(type) {
+  const t = trucks[type];
+  if (game.money >= t.cost) {
+    game.money -= t.cost;
+    t.count++;
+    game.totalDeliveries++;
+    
+    // Exponentiell prisökning
+    t.cost = Math.floor(t.cost * 1.15);
+    
+    checkAchievements();
+    updateUI();
+    saveGame();
+    
+    // Visual feedback
+    document.getElementById('moneyCard').classList.add('money-update');
+    setTimeout(() => document.getElementById('moneyCard').classList.remove('money-update'), 300);
+  }
+}
+
+/* ===== UPGRADE ===== */
+function upgrade(type) {
+  const t = trucks[type];
+  if (game.money >= t.upgradeCost) {
+    game.money -= t.upgradeCost;
+    t.efficiency += 0.25; // +25% effektivitet
+    t.upgradeLevel++;
+    t.upgradeCost = Math.floor(t.upgradeCost * 2);
+    
+    showAchievement(`${t.icon} Uppgraderad till nivå ${t.upgradeLevel}!`);
+    updateUI();
+    saveGame();
+  }
+}
+
+/* ===== CITY ===== */
+function selectCity(cityKey) {
+  const c = cities[cityKey];
+  
+  if (!c.unlocked) {
+    if (game.money >= c.cost) {
+      game.money -= c.cost;
+      c.unlocked = true;
+      showAchievement(`🔓 ${c.name} upplåst!`);
+    } else {
+      return; // För fattig
+    }
+  }
+  
+  game.city = cityKey;
+  updateUI();
+  saveGame();
+}
+
+/* ===== SAVE/LOAD ===== */
+function saveGame() {
+  game.lastSave = Date.now();
+  localStorage.setItem('truckTycoonPro', JSON.stringify({ game, trucks, cities }));
+}
+
+function loadGame() {
+  const saved = localStorage.getItem('truckTycoonPro');
+  if (saved) {
+    const data = JSON.parse(saved);
+    Object.assign(game, data.game);
+    Object.assign(trucks, data.trucks);
+    Object.assign(cities, data.cities);
   }
 }
 
 /* ===== UI ===== */
-function ui(){
-  moneyEl.textContent=Math.floor(money);
-  incomeEl.textContent=income();
-  cityName.textContent=cities[city].name;
-  volvo.textContent=trucks.volvo.count;
-  scania.textContent=trucks.scania.count;
-  man.textContent=trucks.man.count;
+function updateUI() {
+  // Money
+  document.getElementById('money').textContent = Math.floor(game.money);
+  document.getElementById('income').textContent = income();
+  document.getElementById('level').textContent = game.level;
+  
+  // Stats
+  const minutes = Math.floor((Date.now() - game.startTime) / 60000);
+  document.getElementById('playtime').textContent = minutes;
+  document.getElementById('totalDeliveries').textContent = game.totalDeliveries;
+  document.getElementById('totalEarned').textContent = Math.floor(game.totalEarned);
+  document.getElementById('fleetSize').textContent = totalTrucks();
+  
+  // City
+  document.getElementById('cityName').textContent = cities[game.city].name;
+  document.getElementById('travelStatus').textContent = 
+    game.riskEvent ? ' | 🚨 TRAFIKSTOPP!' : '';
+  document.getElementById('travelProgress').style.width = 
+    game.riskEvent ? '100%' : '0%';
+  
+  // Cities
+  for (let c in cities) {
+    const el = document.getElementById(`city-${c}`);
+    if (cities[c].unlocked) {
+      el.classList.remove('locked');
+      if (c === game.city) el.classList.add('active');
+      else el.classList.remove('active');
+    }
+  }
+  
+  // Trucks
+  for (let t in trucks) {
+    const truck = trucks[t];
+    document.getElementById(t).textContent = truck.count;
+    document.getElementById(`${t}-cost`).textContent = truck.cost;
+    document.getElementById(`${t}-income`).textContent = 
+      Math.floor(truck.base * truck.efficiency);
+    document.getElementById(`${t}-efficiency`).textContent = 
+      Math.floor(truck.efficiency * 100);
+    document.getElementById(`${t}-upgrade-cost`).textContent = truck.upgradeCost;
+    
+    // Button states
+    const btn = document.getElementById(`${t}-btn`);
+    const upgBtn = document.getElementById(`${t}-upgrade`);
+    btn.disabled = game.money < truck.cost;
+    upgBtn.disabled = game.money < truck.upgradeCost || truck.count === 0;
+  }
+  
+  // Route
+  document.getElementById('route').value = game.route;
 }
 
-/* ===== LOOP ===== */
-setInterval(()=>{
-  money+=income();
-  save(); ui();
-},1000);
+/* ===== GAME LOOP ===== */
+function startGameLoop() {
+  setInterval(() => {
+    const inc = income();
+    if (inc > 0) {
+      game.money += inc;
+      game.totalEarned += inc;
+      game.totalDeliveries += totalTrucks() * 0.1; // Simulerade leveranser
+    }
+    
+    // Level up baserat på total inkomst
+    const newLevel = Math.floor(Math.log10(game.totalEarned + 10));
+    if (newLevel > game.level) {
+      game.level = newLevel;
+      showAchievement(`🎉 Nivå ${newLevel} uppnådd!`);
+    }
+    
+    checkAchievements();
+    updateUI();
+    saveGame();
+  }, 1000);
+}
 
-/* ===== ELEMENTS ===== */
-const moneyEl=document.getElementById("money");
-const incomeEl=document.getElementById("income");
-const cityName=document.getElementById("cityName");
-const map=document.getElementById("map");
-const volvo=document.getElementById("volvo");
-const scania=document.getElementById("scania");
-const man=document.getElementById("man");
+/* ===== ANIMATIONS ===== */
+function startAnimationLoop() {
+  const map = document.getElementById('map');
+  
+  setInterval(() => {
+    // Rensa gamla
+    document.querySelectorAll('.truck').forEach(t => t.remove());
+    
+    if (game.riskEvent) return; // Ingen animation vid stopp
+    
+    // Rita nya
+    const city = cities[game.city];
+    let position = 20;
+    
+    for (let t in trucks) {
+      for (let i = 0; i < Math.min(trucks[t].count, 5); i++) { // Max 5 visuella
+        const d = document.createElement('div');
+        d.className = 'truck';
+        d.textContent = trucks[t].icon;
+        d.style.left = position + 'px';
+        d.style.bottom = '10px';
+        map.appendChild(d);
+        
+        // Animerad rörelse
+        setTimeout(() => {
+          d.style.left = (position + 150) + 'px';
+        }, 50);
+        
+        position += 40;
+      }
+    }
+  }, 2000);
+}
 
-const routeSelect=document.getElementById("route");
-routeSelect.onchange=()=>{route=+routeSelect.value;save();};
+/* ===== ACHIEVEMENTS ===== */
+function checkAchievements() {
+  achievements.forEach(a => {
+    if (!a.shown && a.condition()) {
+      a.shown = true;
+      showAchievement(a.name);
+    }
+  });
+}
 
-drawTrucks();
-ui();
+function showAchievement(text) {
+  const el = document.getElementById('achievement');
+  document.getElementById('achievement-text').textContent = text;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ===== EVENTS ===== */
+document.getElementById('route').onchange = (e) => {
+  game.route = parseFloat(e.target.value);
+  updateUI();
+};
+
+/* ===== START ===== */
+init();
 </script>
 
 </body>

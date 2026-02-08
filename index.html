@@ -131,7 +131,7 @@ select {
   font-size: 1em;
 }
 
-/* MAP STYLES - FIXAD */
+/* MAP STYLES */
 #map-container {
   position: relative;
   height: 500px;
@@ -178,7 +178,6 @@ select {
   text-align: center;
   min-width: 80px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  /* Centrera på punkten */
   transform: translate(-50%, -50%);
 }
 
@@ -534,7 +533,7 @@ select {
   </div>
   
   <div class="activity-log" id="activityLog">
-    <div class="log-entry">🎮 Välkommen! 1. Välj en rutt nedan 2. Köp en lastbil 3. Tjäna pengar!</div>
+    <div class="log-entry">🎮 Välkommen! 1. Välj en rutt 2. Köp en lastbil 3. Tjäna pengar!</div>
   </div>
 </div>
 
@@ -542,7 +541,7 @@ select {
 <div class="card">
   <h3>🛣️ Välj Transportrutt <span style="color:#f59e0b">← VÄLJ FÖRST!</span></h3>
   <p style="font-size:0.9em;color:#9ca3af;margin-bottom:15px;">
-    Varje rutt har olika risk, tid och belöning. Längre rutter = mer pengar men längre tid.
+    Varje rutt ger olika mycket pengar när lastbilen kommer fram!
   </p>
   <div id="routeButtons"></div>
 </div>
@@ -631,30 +630,23 @@ const game = {
   }
 };
 
-// 12 Städer med KORREKTA koordinater - ingen överlappning!
+// 12 Städer
 const cities = {
-  // Nord (övre delen)
   oslo: { name: "Oslo", x: 25, y: 15, mult: 1.5, cost: 800, unlocked: false, country: "Norge" },
   stockholm: { name: "Stockholm", x: 50, y: 20, mult: 1, cost: 0, unlocked: true, country: "Sverige" },
   helsinki: { name: "Helsingfors", x: 75, y: 12, mult: 1.6, cost: 1200, unlocked: false, country: "Finland" },
-  
-  // Väst (mitten-vänster)
   gothenburg: { name: "Göteborg", x: 35, y: 40, mult: 1.4, cost: 600, unlocked: false, country: "Sverige" },
   amsterdam: { name: "Amsterdam", x: 20, y: 50, mult: 2.3, cost: 4000, unlocked: false, country: "Nederländerna" },
   london: { name: "London", x: 10, y: 65, mult: 2.8, cost: 6000, unlocked: false, country: "Storbritannien" },
-  
-  // Syd (nedre delen)
   malmo: { name: "Malmö", x: 45, y: 55, mult: 1.5, cost: 1000, unlocked: false, country: "Sverige" },
   copenhagen: { name: "Köpenhamn", x: 42, y: 70, mult: 1.7, cost: 1500, unlocked: false, country: "Danmark" },
   hamburg: { name: "Hamburg", x: 35, y: 80, mult: 2.0, cost: 2500, unlocked: false, country: "Tyskland" },
   berlin: { name: "Berlin", x: 55, y: 75, mult: 2.2, cost: 3500, unlocked: false, country: "Tyskland" },
-  
-  // Långt borta
   paris: { name: "Paris", x: 18, y: 90, mult: 2.5, cost: 5000, unlocked: false, country: "Frankrike" },
   warsaw: { name: "Warszawa", x: 85, y: 60, mult: 2.1, cost: 4500, unlocked: false, country: "Polen" }
 };
 
-// 10 Lastbilsmodeller
+// 10 Lastbilar
 const trucks = {
   volvo_fl: { name: "Volvo FL", icon: "🚐", base: 2, cost: 100, efficiency: 1, upgradeCost: 250, upgradeLevel: 1, count: 0, speed: 80, capacity: 12, tier: 1, description: "Liten distributionsbil" },
   volvo_fm: { name: "Volvo FM", icon: "🚚", base: 8, cost: 450, efficiency: 1, upgradeCost: 800, upgradeLevel: 1, count: 0, speed: 85, capacity: 18, tier: 1, description: "Mångsidig lastbil" },
@@ -669,11 +661,11 @@ const trucks = {
 };
 
 const routes = [
-  { id: 'local', name: "Lokal", mult: 1, time: 10, risk: 0, desc: "Korta transporter inom staden" },
+  { id: 'local', name: "Lokal", mult: 1, time: 10, risk: 0, desc: "Korta transporter" },
   { id: 'regional', name: "Regional", mult: 1.8, time: 30, risk: 0.05, desc: "Till grannstäder" },
-  { id: 'national', name: "Rikstäckande", mult: 2.5, time: 60, risk: 0.10, desc: "Korsa hela landet" },
+  { id: 'national', name: "Rikstäckande", mult: 2.5, time: 60, risk: 0.10, desc: "Korsa landet" },
   { id: 'international', name: "Internationellt", mult: 4, time: 120, risk: 0.20, desc: "Till utlandet" },
-  { id: 'express', name: "Express", mult: 3, time: 45, risk: 0.15, desc: "Snabba leveranser" }
+  { id: 'express', name: "Express", mult: 3, time: 45, risk: 0.15, desc: "Snabbt" }
 ];
 
 let activeTrucks = [];
@@ -704,9 +696,11 @@ function totalTrucks() {
   return Object.values(trucks).reduce((a, b) => a + b.count, 0);
 }
 
-function income() {
+function calculateIncome() {
   let total = 0;
-  for (let t in trucks) total += trucks[t].count * trucks[t].base * trucks[t].efficiency;
+  for (let t in trucks) {
+    total += trucks[t].count * trucks[t].base * trucks[t].efficiency;
+  }
   return Math.floor(total);
 }
 
@@ -723,7 +717,7 @@ function calculateOfflineIncome() {
   const now = Date.now();
   const offlineSeconds = Math.floor((now - game.lastSave) / 1000);
   if (offlineSeconds > 10 && totalTrucks() > 0) {
-    const income = Math.floor(income() * Math.min(offlineSeconds, 7200) * 0.5);
+    const income = Math.floor(calculateIncome() * Math.min(offlineSeconds, 7200) * 0.5);
     if (income > 0) {
       game.money += income;
       game.totalEarned += income;
@@ -737,7 +731,6 @@ function renderMap() {
   const svg = document.getElementById('roadSvg');
   svg.innerHTML = '';
   
-  // Rita vägar
   const connections = [
     ['stockholm', 'oslo'], ['stockholm', 'helsinki'], ['stockholm', 'gothenburg'],
     ['gothenburg', 'oslo'], ['gothenburg', 'malmo'], ['malmo', 'copenhagen'],
@@ -758,7 +751,6 @@ function renderMap() {
     }
   });
   
-  // Rita städer
   document.querySelectorAll('.city').forEach(c => c.remove());
   const container = document.getElementById('map-container');
   
@@ -817,13 +809,14 @@ function selectRoute(id) {
   renderRoutes();
   addLog(`🛣️ Rutt: ${routes.find(r => r.id === id).name}`);
   
-  // Skicka ut befintliga lastbilar
+  // Skicka ut befintliga lastbilar på den nya rutten
   if (totalTrucks() > 0) {
     Object.keys(trucks).forEach(type => {
       for (let i = 0; i < trucks[type].count; i++) {
         setTimeout(() => sendTruckOnRoute(type), i * 300);
       }
     });
+    addLog(`🚛 Skickade ut ${totalTrucks()} lastbilar!`);
   }
   updateUI();
 }
@@ -865,15 +858,22 @@ function buyTruck(type) {
     t.cost = Math.floor(t.cost * 1.5);
     addLog(`🚛 Köpte ${t.name}`);
     
+    // VIKTIGT: Skicka ut direkt om rutt är vald!
     if (game.selectedRoute) {
       sendTruckOnRoute(type);
-      addLog(`🚀 Skickad på rutt!`);
+      addLog(`🚀 Skickad på ${routes.find(r => r.id === game.selectedRoute).name}!`);
+    } else {
+      addLog(`⚠️ Välj en rutt för att tjäna pengar!`);
     }
     
     renderTrucks();
     updateUI();
     saveGame();
     checkAchievements();
+    
+    // Visual feedback
+    document.getElementById('moneyCard').classList.add('money-update');
+    setTimeout(() => document.getElementById('moneyCard').classList.remove('money-update'), 300);
   }
 }
 
@@ -891,7 +891,7 @@ function upgradeTruck(type) {
   }
 }
 
-/* ==================== TRUCK MOVEMENT ==================== */
+/* ==================== TRUCK MOVEMENT & INKOMST ==================== */
 function sendTruckOnRoute(type) {
   if (!game.selectedRoute) return;
   
@@ -902,6 +902,12 @@ function sendTruckOnRoute(type) {
   const target = targets[Math.floor(Math.random() * targets.length)];
   const id = ++truckIdCounter;
   
+  // Beräkna vinst baserat på rutt och stad
+  const baseEarnings = trucks[type].base * trucks[type].efficiency;
+  const routeMult = route.mult;
+  const cityMult = cities[target].mult;
+  const totalEarnings = Math.floor(baseEarnings * routeMult * cityMult * 10); // Multiplicera för att få rimliga summor
+  
   const entity = {
     id,
     type,
@@ -909,17 +915,18 @@ function sendTruckOnRoute(type) {
     to: target,
     startTime: Date.now(),
     duration: route.time * 1000,
-    earnings: Math.floor(trucks[type].base * route.mult * cities[target].mult * trucks[type].efficiency)
+    earnings: totalEarnings
   };
   
   activeTrucks.push(entity);
+  addLog(`🚛 ${trucks[type].name} → ${cities[target].name} ($${totalEarnings})`);
   
   // Visa på karta
   const container = document.getElementById('map-container');
   const div = document.createElement('div');
   div.className = 'truck-entity';
   div.id = `truck-${id}`;
-  div.innerHTML = `${trucks[type].icon}<div class="truck-tooltip">${trucks[type].name} → ${cities[target].name}<br>$${entity.earnings}</div>`;
+  div.innerHTML = `${trucks[type].icon}<div class="truck-tooltip">${trucks[type].name}<br>Till: ${cities[target].name}<br>Vinst: $${totalEarnings}</div>`;
   div.style.left = cities[game.currentCity].x + '%';
   div.style.top = cities[game.currentCity].y + '%';
   div.onclick = () => showTruckDetails(entity);
@@ -995,32 +1002,52 @@ function startManagerLoop() {
       const upgradable = Object.entries(trucks).filter(([k,t]) => t.count > 0 && game.money >= t.upgradeCost).sort((a,b) => b[1].count - a[1].count)[0];
       if (upgradable) upgradeTruck(upgradable[0]);
     }
+    if (game.managers.autoRoute && game.selectedRoute) {
+      Object.keys(trucks).forEach(type => {
+        if (trucks[type].count > 0 && Math.random() < 0.1) {
+          sendTruckOnRoute(type);
+        }
+      });
+    }
   }, 3000);
 }
 
-/* ==================== GAME LOOP ==================== */
+/* ==================== GAME LOOP - HÄR TJÄNAR DU PENGAR! ==================== */
 function startGameLoop() {
   setInterval(() => {
-    // Passiv inkomst
-    const earned = Math.floor(income() * cities[game.currentCity].mult * 0.1);
-    game.money += earned;
-    game.totalEarned += earned;
-    
-    // Kolla färdiga lastbilar
     const now = Date.now();
+    
+    // Kolla vilka lastbilar som kommit fram - HÄR FÅR DU PENGAR!
     activeTrucks = activeTrucks.filter(t => {
-      if (now > t.startTime + t.duration) {
+      if (now >= t.startTime + t.duration) {
+        // LASTBILEN ÄR FRAMME - FÅ PENGAR!
         game.money += t.earnings;
         game.totalEarned += t.earnings;
         game.totalDeliveries++;
         
+        // Ta bort från kartan
         const el = document.getElementById(`truck-${t.id}`);
-        if (el) el.remove();
+        if (el) {
+          el.style.transform = 'translate(-50%, -50%) scale(0)';
+          setTimeout(() => el.remove(), 300);
+        }
         
-        addLog(`✅ +$${t.earnings} från ${cities[t.to].name}`);
-        return false;
+        addLog(`✅ Leverans klar! +$${t.earnings}`);
+        
+        // Risk för problem
+        const route = routes.find(r => r.id === game.selectedRoute);
+        if (route && Math.random() < route.risk) {
+          const penalty = Math.floor(t.earnings * 0.2);
+          game.money -= penalty;
+          addLog(`🚨 Problem! -$${penalty} i reparation`);
+        }
+        
+        // Skicka ut igen automatiskt (loopa!)
+        setTimeout(() => sendTruckOnRoute(t.type), 1000);
+        
+        return false; // Ta bort från array
       }
-      return true;
+      return true; // Fortsätt åka
     });
     
     // Level up
@@ -1032,14 +1059,17 @@ function startGameLoop() {
     
     updateUI();
     saveGame();
-  }, 1000);
+  }, 1000); // Kolla varje sekund
 }
 
 function startAnimationLoop() {
   setInterval(() => {
     const now = Date.now();
     let progress = 0;
-    activeTrucks.forEach(t => progress += Math.min((now - t.startTime) / t.duration, 1));
+    activeTrucks.forEach(t => {
+      const p = Math.min((now - t.startTime) / t.duration, 1);
+      progress += p;
+    });
     document.getElementById('routeProgress').style.width = activeTrucks.length ? (progress / activeTrucks.length * 100) + '%' : '0%';
     document.getElementById('activeTrucks').textContent = activeTrucks.length;
   }, 100);
@@ -1095,7 +1125,7 @@ function loadGame() {
 
 function updateUI() {
   document.getElementById('money').textContent = formatMoney(Math.floor(game.money));
-  document.getElementById('income').textContent = formatMoney(income());
+  document.getElementById('income').textContent = formatMoney(calculateIncome());
   document.getElementById('level').textContent = game.level;
   document.getElementById('cityName').textContent = cities[game.currentCity].name;
   document.getElementById('activeRoute').textContent = game.selectedRoute ? routes.find(r => r.id === game.selectedRoute).name : 'Välj rutt';

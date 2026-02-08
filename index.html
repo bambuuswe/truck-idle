@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Idle Truck Tycoon 🚛</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #2e2e4f);
+      color: white;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 { font-size: 2.5em; }
+    .money { font-size: 1.8em; margin: 20px 0; }
+    .card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 15px auto;
+      max-width: 320px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #4caf50;
+      color: white;
+    }
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🚛 Idle Truck Tycoon</h1>
+  <div class="money">💰 Pengar: <span id="money">0</span> kr</div>
+  <div>💸 Inkomst: <span id="income">0</span> kr / sek</div>
+
+  <div class="card">
+    <h2>🚚 Volvo FH</h2>
+    <p>Ger 1 kr / sek</p>
+    <p>Ägda: <span id="volvoCount">0</span></p>
+    <button onclick="buyVolvo()">Köp (10 kr)</button>
+  </div>
+
+  <div class="card">
+    <h2>🚛 Scania R</h2>
+    <p>Ger 5 kr / sek</p>
+    <p>Ägda: <span id="scaniaCount">0</span></p>
+    <button onclick="buyScania()">Köp (50 kr)</button>
+  </div>
+
+<script>
+  let money = Number(localStorage.getItem("money")) || 0;
+  let volvo = Number(localStorage.getItem("volvo")) || 0;
+  let scania = Number(localStorage.getItem("scania")) || 0;
+
+  function incomePerSecond() {
+    return volvo * 1 + scania * 5;
+  }
+
+  function updateUI() {
+    document.getElementById("money").textContent = Math.floor(money);
+    document.getElementById("income").textContent = incomePerSecond();
+    document.getElementById("volvoCount").textContent = volvo;
+    document.getElementById("scaniaCount").textContent = scania;
+  }
+
+  function save() {
+    localStorage.setItem("money", money);
+    localStorage.setItem("volvo", volvo);
+    localStorage.setItem("scania", scania);
+  }
+
+  function buyVolvo() {
+    if (money >= 10) {
+      money -= 10;
+      volvo++;
+      save();
+      updateUI();
+    }
+  }
+
+  function buyScania() {
+    if (money >= 50) {
+      money -= 50;
+      scania++;
+      save();
+      updateUI();
+    }
+  }
+
+  setInterval(() => {
+    money += incomePerSecond();
+    save();
+    updateUI();
+  }, 1000);
+
+  updateUI();
+</script>
+
+</body>
+</html>

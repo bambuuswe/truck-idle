@@ -637,7 +637,17 @@ select {
   </p>
   <div id="managerSection"></div>
 </div>
-
+<!-- RESET SECTION -->
+<div class="card" style="border: 2px solid #ef4444;">
+  <h3>⚠️ Farozon</h3>
+  <p style="font-size:0.9em;color:#9ca3af;">
+    Återställ all progress och börja om från början.
+  </p>
+  <button onclick="resetGame()" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+    🗑️ Återställ Spel
+  </button>
+</div>
+  
 </div>
 
 <!-- ACHIEVEMENT POPUP -->
@@ -1109,6 +1119,12 @@ function upgradeTruck(type) {
     renderTrucks();
     updateUI();
     saveGame();
+  }
+}
+  function resetGame() {
+  if (confirm('Är du säker? All progress kommer försvinna för alltid!')) {
+    localStorage.removeItem('truckTycoonUltimate');
+    location.reload();
   }
 }
 

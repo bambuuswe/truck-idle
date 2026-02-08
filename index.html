@@ -10,17 +10,16 @@ body{
   color:white;
   font-family:Arial, sans-serif;
   text-align:center;
-  padding:30px;
+  padding:20px;
 }
-h1{font-size:2.5em}
-.money{font-size:1.8em;margin:10px}
+h1{font-size:2.4em}
 
 .card{
   background:rgba(255,255,255,.1);
   border-radius:14px;
   padding:15px;
-  margin:15px auto;
-  max-width:360px;
+  margin:12px auto;
+  max-width:380px;
 }
 
 button{
@@ -32,29 +31,36 @@ button{
   cursor:pointer;
   margin:4px;
 }
-button:disabled{
-  background:#555;
-  cursor:not-allowed;
+button:disabled{background:#555}
+
+.money{font-size:1.6em;margin:10px}
+
+#map{
+  position:relative;
+  height:120px;
+  border-radius:12px;
+  background:#0b3d2e;
+  overflow:hidden;
 }
 
-#map button{
-  background:#2196f3;
-}
-#map button.locked{
-  background:#555;
+.truck{
+  position:absolute;
+  font-size:22px;
+  animation:drive 6s linear infinite;
 }
 
-select{
-  padding:6px;
-  border-radius:6px;
+@keyframes drive{
+  from{left:-40px}
+  to{left:100%}
 }
+
+select{padding:6px;border-radius:6px}
 
 .float{
   position:fixed;
   color:#7CFF7C;
   font-weight:bold;
   animation:floatUp 1s ease-out forwards;
-  pointer-events:none;
 }
 
 @keyframes floatUp{
@@ -68,24 +74,24 @@ select{
 
 <h1>🚛 Idle Truck Tycoon</h1>
 
-<div class="money">💰 <span id="money">0</span> kr</div>
-<div>💸 <span id="income">0</span> kr / sek</div>
+<div class="money">💰 $<span id="money">10</span></div>
+<div>💸 <span id="income">0</span> / sek</div>
+
+<!-- MUSIC -->
+<div class="card">
+  <button onclick="toggleMusic()">🎵 Musik On/Off</button>
+</div>
 
 <!-- MAP -->
 <div class="card">
   <h3>🗺️ Karta</h3>
-  <div id="map">
-    <button id="stockholm" onclick="selectCity('stockholm')">🏙️ Stockholm</button>
-    <button id="gothenburg" onclick="selectCity('gothenburg')">🌉 Göteborg</button>
-    <button id="berlin" onclick="selectCity('berlin')">🌍 Berlin</button>
-  </div>
-  <p>Vald stad: <b><span id="cityName"></span></b></p>
+  <div id="map"></div>
 </div>
 
 <!-- ROUTE -->
 <div class="card">
   <h3>🛣️ Rutt</h3>
-  <select id="route" onchange="save()">
+  <select id="route">
     <option value="1">🏙️ Stad (x1)</option>
     <option value="1.5">🛣️ Motorväg (x1.5)</option>
     <option value="2">🌍 Internationell (x2)</option>
@@ -94,124 +100,152 @@ select{
 
 <!-- VOLVO -->
 <div class="card">
-  <h2>🚚 Volvo FH</h2>
-  <p>Bas: 1 kr/sek</p>
-  <p>Ägda: <span id="volvo">0</span></p>
-  <p>Upgrade lvl: <span id="volvoUp">0</span></p>
-  <button onclick="buyVolvo()">Köp (10)</button>
-  <button onclick="upgradeVolvo()">Upgrade (25)</button>
+<h3>🚚 Volvo FH</h3>
+<p>1$/sek | Ägda: <span id="volvo">0</span></p>
+<p>Upgrade: <span id="volvoUp">0</span></p>
+<button onclick="buy('volvo')">Köp (10)</button>
+<button onclick="upgrade('volvo')">Upgrade (25)</button>
 </div>
 
 <!-- SCANIA -->
 <div class="card">
-  <h2>🚛 Scania R</h2>
-  <p>Bas: 5 kr/sek</p>
-  <p>Ägda: <span id="scania">0</span></p>
-  <p>Upgrade lvl: <span id="scaniaUp">0</span></p>
-  <button onclick="buyScania()">Köp (50)</button>
-  <button onclick="upgradeScania()">Upgrade (100)</button>
+<h3>🚛 Scania R</h3>
+<p>5$/sek | Ägda: <span id="scania">0</span></p>
+<p>Upgrade: <span id="scaniaUp">0</span></p>
+<button onclick="buy('scania')">Köp (50)</button>
+<button onclick="upgrade('scania')">Upgrade (100)</button>
 </div>
 
+<!-- MAN -->
+<div class="card">
+<h3>🚐 MAN TGX</h3>
+<p>15$/sek | Ägda: <span id="man">0</span></p>
+<p>Upgrade: <span id="manUp">0</span></p>
+<button onclick="buy('man')">Köp (150)</button>
+<button onclick="upgrade('man')">Upgrade (300)</button>
+</div>
+
+<audio id="music" loop>
+  <source src="https://cdn.pixabay.com/audio/2022/08/01/audio_9b4d9e0e8c.mp3" type="audio/mpeg">
+</audio>
+
 <script>
-/* ===== SAVE DATA ===== */
-let money = +localStorage.money || 0;
-let volvo = +localStorage.volvo || 0;
-let scania = +localStorage.scania || 0;
-let volvoUp = +localStorage.volvoUp || 0;
-let scaniaUp = +localStorage.scaniaUp || 0;
-let city = localStorage.city || "stockholm";
+/* ===== DATA ===== */
+let money = +localStorage.money || 10;
+let lastTime = +localStorage.lastTime || Date.now();
+let route = +localStorage.route || 1;
 
-/* ===== ROUTES & CITIES ===== */
-const routeSelect = document.getElementById("route");
-routeSelect.value = localStorage.route || 1;
-
-const cities = {
-  stockholm:{name:"Stockholm",mult:1,req:0},
-  gothenburg:{name:"Göteborg",mult:1.5,req:20},
-  berlin:{name:"Berlin",mult:2.5,req:100}
+const trucks = {
+  volvo:{count:+localStorage.volvo||0,up:+localStorage.volvoUp||0,base:1,icon:"🚚"},
+  scania:{count:+localStorage.scania||0,up:+localStorage.scaniaUp||0,base:5,icon:"🚛"},
+  man:{count:+localStorage.man||0,up:+localStorage.manUp||0,base:15,icon:"🚐"}
 };
+
+/* ===== OFFLINE INCOME ===== */
+let diff = Math.floor((Date.now()-lastTime)/1000);
+money += diff * income();
+
+/* ===== MUSIC ===== */
+const music=document.getElementById("music");
+let musicOn = localStorage.music==="on";
+if(musicOn) music.play();
+
+function toggleMusic(){
+  musicOn=!musicOn;
+  localStorage.music=musicOn?"on":"off";
+  musicOn?music.play():music.pause();
+}
 
 /* ===== INCOME ===== */
 function income(){
-  let base =
-    volvo * (1 + volvoUp*0.5) +
-    scania * (5 + scaniaUp*2);
-  return Math.floor(base * routeSelect.value * cities[city].mult);
+  let total=0;
+  for(let t in trucks){
+    total+=trucks[t].count*(trucks[t].base+trucks[t].up*trucks[t].base);
+  }
+  return Math.floor(total*route);
 }
 
-/* ===== FLOAT ANIMATION ===== */
-function floatMoney(amount){
-  if(amount<=0) return;
-  let d=document.createElement("div");
-  d.className="float";
-  d.textContent=`+${amount} kr`;
-  d.style.left="50%";
-  d.style.top="60%";
-  document.body.appendChild(d);
-  setTimeout(()=>d.remove(),1000);
-}
-
-/* ===== GAME LOOP ===== */
-function tick(){
-  let inc = income();
-  money += inc;
-  floatMoney(inc);
-  save();
-  ui();
-}
-
-/* ===== UI ===== */
-function ui(){
-  moneyEl.textContent = Math.floor(money);
-  incomeEl.textContent = income();
-  volvoEl.textContent = volvo;
-  scaniaEl.textContent = scania;
-  volvoUpEl.textContent = volvoUp;
-  scaniaUpEl.textContent = scaniaUp;
-  cityName.textContent = cities[city].name;
-
-  for(let c in cities){
-    let btn=document.getElementById(c);
-    btn.classList.toggle("locked", income() < cities[c].req);
+/* ===== MAP TRUCKS ===== */
+function drawTrucks(){
+  map.innerHTML="";
+  for(let t in trucks){
+    for(let i=0;i<trucks[t].count;i++){
+      let d=document.createElement("div");
+      d.className="truck";
+      d.textContent=trucks[t].icon;
+      d.style.top=Math.random()*80+"px";
+      d.style.animationDuration=(4+Math.random()*4)+"s";
+      map.appendChild(d);
+    }
   }
 }
 
 /* ===== ACTIONS ===== */
-function buyVolvo(){ if(money>=10){money-=10;volvo++;save();ui();} }
-function buyScania(){ if(money>=50){money-=50;scania++;save();ui();} }
-function upgradeVolvo(){ if(money>=25){money-=25;volvoUp++;save();ui();} }
-function upgradeScania(){ if(money>=100){money-=100;scaniaUp++;save();ui();} }
-
-function selectCity(c){
-  if(income() >= cities[c].req){
-    city = c;
-    save();
-    ui();
+function buy(t){
+  let cost={volvo:10,scania:50,man:150}[t];
+  if(money>=cost){
+    money-=cost;
+    trucks[t].count++;
+    drawTrucks(); save(); ui();
   }
+}
+function upgrade(t){
+  let cost={volvo:25,scania:100,man:300}[t];
+  if(money>=cost){
+    money-=cost;
+    trucks[t].up++;
+    save(); ui();
+  }
+}
+
+/* ===== UI ===== */
+function ui(){
+  moneyEl.textContent=Math.floor(money);
+  incomeEl.textContent=income();
+  routeSelect.value=route;
+
+  volvo.textContent=trucks.volvo.count;
+  scania.textContent=trucks.scania.count;
+  man.textContent=trucks.man.count;
+
+  volvoUp.textContent=trucks.volvo.up;
+  scaniaUp.textContent=trucks.scania.up;
+  manUp.textContent=trucks.man.up;
 }
 
 /* ===== SAVE ===== */
 function save(){
-  localStorage.money = money;
-  localStorage.volvo = volvo;
-  localStorage.scania = scania;
-  localStorage.volvoUp = volvoUp;
-  localStorage.scaniaUp = scaniaUp;
-  localStorage.route = routeSelect.value;
-  localStorage.city = city;
+  localStorage.money=money;
+  localStorage.lastTime=Date.now();
+  localStorage.route=route;
+  for(let t in trucks){
+    localStorage[t]=trucks[t].count;
+    localStorage[t+"Up"]=trucks[t].up;
+  }
 }
 
+/* ===== LOOP ===== */
+setInterval(()=>{
+  money+=income();
+  save(); ui();
+},1000);
+
 /* ===== ELEMENTS ===== */
-const moneyEl = document.getElementById("money");
-const incomeEl = document.getElementById("income");
-const volvoEl = document.getElementById("volvo");
-const scaniaEl = document.getElementById("scania");
-const volvoUpEl = document.getElementById("volvoUp");
-const scaniaUpEl = document.getElementById("scaniaUp");
-const cityName = document.getElementById("cityName");
+const moneyEl=moneyEl=document.getElementById("money");
+const incomeEl=document.getElementById("income");
+const routeSelect=document.getElementById("route");
+routeSelect.onchange=()=>{route=+routeSelect.value;save();};
+
+const map=document.getElementById("map");
+const volvo=document.getElementById("volvo");
+const scania=document.getElementById("scania");
+const man=document.getElementById("man");
+const volvoUp=document.getElementById("volvoUp");
+const scaniaUp=document.getElementById("scaniaUp");
+const manUp=document.getElementById("manUp");
 
 /* ===== START ===== */
-setInterval(tick,1000);
+drawTrucks();
 ui();
 </script>
 

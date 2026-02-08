@@ -1,107 +1,218 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <title>Idle Truck Tycoon 🚛</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #1e1e2f, #2e2e4f);
-      color: white;
-      text-align: center;
-      padding: 30px;
-    }
-    h1 { font-size: 2.5em; }
-    .money { font-size: 1.8em; margin: 20px 0; }
-    .card {
-      background: rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 20px;
-      margin: 15px auto;
-      max-width: 320px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #4caf50;
-      color: white;
-    }
-    button:disabled {
-      background: #777;
-      cursor: not-allowed;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Idle Truck Tycoon 🚛</title>
+
+<style>
+body{
+  background:linear-gradient(135deg,#1e1e2f,#2e2e4f);
+  color:white;
+  font-family:Arial, sans-serif;
+  text-align:center;
+  padding:30px;
+}
+h1{font-size:2.5em}
+.money{font-size:1.8em;margin:10px}
+
+.card{
+  background:rgba(255,255,255,.1);
+  border-radius:14px;
+  padding:15px;
+  margin:15px auto;
+  max-width:360px;
+}
+
+button{
+  padding:8px 16px;
+  border:none;
+  border-radius:8px;
+  background:#4caf50;
+  color:white;
+  cursor:pointer;
+  margin:4px;
+}
+button:disabled{
+  background:#555;
+  cursor:not-allowed;
+}
+
+#map button{
+  background:#2196f3;
+}
+#map button.locked{
+  background:#555;
+}
+
+select{
+  padding:6px;
+  border-radius:6px;
+}
+
+.float{
+  position:fixed;
+  color:#7CFF7C;
+  font-weight:bold;
+  animation:floatUp 1s ease-out forwards;
+  pointer-events:none;
+}
+
+@keyframes floatUp{
+  from{opacity:1;transform:translateY(0)}
+  to{opacity:0;transform:translateY(-40px)}
+}
+</style>
 </head>
+
 <body>
 
-  <h1>🚛 Idle Truck Tycoon</h1>
-  <div class="money">💰 Pengar: <span id="money">0</span> kr</div>
-  <div>💸 Inkomst: <span id="income">0</span> kr / sek</div>
+<h1>🚛 Idle Truck Tycoon</h1>
 
-  <div class="card">
-    <h2>🚚 Volvo FH</h2>
-    <p>Ger 1 kr / sek</p>
-    <p>Ägda: <span id="volvoCount">0</span></p>
-    <button onclick="buyVolvo()">Köp (10 kr)</button>
-  </div>
+<div class="money">💰 <span id="money">0</span> kr</div>
+<div>💸 <span id="income">0</span> kr / sek</div>
 
-  <div class="card">
-    <h2>🚛 Scania R</h2>
-    <p>Ger 5 kr / sek</p>
-    <p>Ägda: <span id="scaniaCount">0</span></p>
-    <button onclick="buyScania()">Köp (50 kr)</button>
+<!-- MAP -->
+<div class="card">
+  <h3>🗺️ Karta</h3>
+  <div id="map">
+    <button id="stockholm" onclick="selectCity('stockholm')">🏙️ Stockholm</button>
+    <button id="gothenburg" onclick="selectCity('gothenburg')">🌉 Göteborg</button>
+    <button id="berlin" onclick="selectCity('berlin')">🌍 Berlin</button>
   </div>
+  <p>Vald stad: <b><span id="cityName"></span></b></p>
+</div>
+
+<!-- ROUTE -->
+<div class="card">
+  <h3>🛣️ Rutt</h3>
+  <select id="route" onchange="save()">
+    <option value="1">🏙️ Stad (x1)</option>
+    <option value="1.5">🛣️ Motorväg (x1.5)</option>
+    <option value="2">🌍 Internationell (x2)</option>
+  </select>
+</div>
+
+<!-- VOLVO -->
+<div class="card">
+  <h2>🚚 Volvo FH</h2>
+  <p>Bas: 1 kr/sek</p>
+  <p>Ägda: <span id="volvo">0</span></p>
+  <p>Upgrade lvl: <span id="volvoUp">0</span></p>
+  <button onclick="buyVolvo()">Köp (10)</button>
+  <button onclick="upgradeVolvo()">Upgrade (25)</button>
+</div>
+
+<!-- SCANIA -->
+<div class="card">
+  <h2>🚛 Scania R</h2>
+  <p>Bas: 5 kr/sek</p>
+  <p>Ägda: <span id="scania">0</span></p>
+  <p>Upgrade lvl: <span id="scaniaUp">0</span></p>
+  <button onclick="buyScania()">Köp (50)</button>
+  <button onclick="upgradeScania()">Upgrade (100)</button>
+</div>
 
 <script>
-  let money = Number(localStorage.getItem("money")) || 0;
-  let volvo = Number(localStorage.getItem("volvo")) || 0;
-  let scania = Number(localStorage.getItem("scania")) || 0;
+/* ===== SAVE DATA ===== */
+let money = +localStorage.money || 0;
+let volvo = +localStorage.volvo || 0;
+let scania = +localStorage.scania || 0;
+let volvoUp = +localStorage.volvoUp || 0;
+let scaniaUp = +localStorage.scaniaUp || 0;
+let city = localStorage.city || "stockholm";
 
-  function incomePerSecond() {
-    return volvo * 1 + scania * 5;
+/* ===== ROUTES & CITIES ===== */
+const routeSelect = document.getElementById("route");
+routeSelect.value = localStorage.route || 1;
+
+const cities = {
+  stockholm:{name:"Stockholm",mult:1,req:0},
+  gothenburg:{name:"Göteborg",mult:1.5,req:20},
+  berlin:{name:"Berlin",mult:2.5,req:100}
+};
+
+/* ===== INCOME ===== */
+function income(){
+  let base =
+    volvo * (1 + volvoUp*0.5) +
+    scania * (5 + scaniaUp*2);
+  return Math.floor(base * routeSelect.value * cities[city].mult);
+}
+
+/* ===== FLOAT ANIMATION ===== */
+function floatMoney(amount){
+  if(amount<=0) return;
+  let d=document.createElement("div");
+  d.className="float";
+  d.textContent=`+${amount} kr`;
+  d.style.left="50%";
+  d.style.top="60%";
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),1000);
+}
+
+/* ===== GAME LOOP ===== */
+function tick(){
+  let inc = income();
+  money += inc;
+  floatMoney(inc);
+  save();
+  ui();
+}
+
+/* ===== UI ===== */
+function ui(){
+  moneyEl.textContent = Math.floor(money);
+  incomeEl.textContent = income();
+  volvoEl.textContent = volvo;
+  scaniaEl.textContent = scania;
+  volvoUpEl.textContent = volvoUp;
+  scaniaUpEl.textContent = scaniaUp;
+  cityName.textContent = cities[city].name;
+
+  for(let c in cities){
+    let btn=document.getElementById(c);
+    btn.classList.toggle("locked", income() < cities[c].req);
   }
+}
 
-  function updateUI() {
-    document.getElementById("money").textContent = Math.floor(money);
-    document.getElementById("income").textContent = incomePerSecond();
-    document.getElementById("volvoCount").textContent = volvo;
-    document.getElementById("scaniaCount").textContent = scania;
-  }
+/* ===== ACTIONS ===== */
+function buyVolvo(){ if(money>=10){money-=10;volvo++;save();ui();} }
+function buyScania(){ if(money>=50){money-=50;scania++;save();ui();} }
+function upgradeVolvo(){ if(money>=25){money-=25;volvoUp++;save();ui();} }
+function upgradeScania(){ if(money>=100){money-=100;scaniaUp++;save();ui();} }
 
-  function save() {
-    localStorage.setItem("money", money);
-    localStorage.setItem("volvo", volvo);
-    localStorage.setItem("scania", scania);
-  }
-
-  function buyVolvo() {
-    if (money >= 10) {
-      money -= 10;
-      volvo++;
-      save();
-      updateUI();
-    }
-  }
-
-  function buyScania() {
-    if (money >= 50) {
-      money -= 50;
-      scania++;
-      save();
-      updateUI();
-    }
-  }
-
-  setInterval(() => {
-    money += incomePerSecond();
+function selectCity(c){
+  if(income() >= cities[c].req){
+    city = c;
     save();
-    updateUI();
-  }, 1000);
+    ui();
+  }
+}
 
-  updateUI();
+/* ===== SAVE ===== */
+function save(){
+  localStorage.money = money;
+  localStorage.volvo = volvo;
+  localStorage.scania = scania;
+  localStorage.volvoUp = volvoUp;
+  localStorage.scaniaUp = scaniaUp;
+  localStorage.route = routeSelect.value;
+  localStorage.city = city;
+}
+
+/* ===== ELEMENTS ===== */
+const moneyEl = document.getElementById("money");
+const incomeEl = document.getElementById("income");
+const volvoEl = document.getElementById("volvo");
+const scaniaEl = document.getElementById("scania");
+const volvoUpEl = document.getElementById("volvoUp");
+const scaniaUpEl = document.getElementById("scaniaUp");
+const cityName = document.getElementById("cityName");
+
+/* ===== START ===== */
+setInterval(tick,1000);
+ui();
 </script>
 
 </body>

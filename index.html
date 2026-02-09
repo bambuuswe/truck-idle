@@ -521,7 +521,7 @@ select {
   
   <div style="margin-top:15px;display:flex;justify-content:space-between;align-items:center;">
     <div>
-      <b>Aktiv rutt:</b> <span id="activeRoute" style="color:#22c55e">Välj nedan</span>
+      <b>Vald rutt:</b> <span id="activeRoute" style="color:#22c55e">Ingen (välj efter köp)</span>
     </div>
     <div style="font-size:0.9em;color:#9ca3af">
       🚛 <span id="activeTrucks">0</span> lastbilar på vägen
@@ -533,15 +533,15 @@ select {
   </div>
   
   <div class="activity-log" id="activityLog">
-    <div class="log-entry">🎮 Välkommen! 1. Välj en rutt 2. Köp en lastbil 3. Tjäna pengar!</div>
+    <div class="log-entry">🎮 Välkommen! 1. Köp en lastbil 2. Välj rutt 3. Tjäna pengar!</div>
   </div>
 </div>
 
-<!-- ROUTE SELECTOR -->
+<!-- ROUTE SELECTOR - NU EFTER KÖP -->
 <div class="card">
-  <h3>🛣️ Välj Transportrutt <span style="color:#f59e0b">← VÄLJ FÖRST!</span></h3>
+  <h3>🛣️ Välj Rutt <span style="color:#f59e0b">← VÄLJ EFTER DU KÖPT LASTBIL!</span></h3>
   <p style="font-size:0.9em;color:#9ca3af;margin-bottom:15px;">
-    Varje rutt ger olika mycket pengar när lastbilen kommer fram!
+    Alla dina lastbilar kommer köra på denna rutt. Välj den som passar dig bäst!
   </p>
   <div id="routeButtons"></div>
 </div>
@@ -704,12 +704,25 @@ function calculateIncome() {
   return Math.floor(total);
 }
 
-/* ==================== RESET ==================== */
+/* ==================== RESET - NU MED HARD RELOAD ==================== */
 function resetGame() {
   if (confirm('Är du säker? All progress kommer försvinna för alltid!')) {
-    localStorage.removeItem('truckTycoonUltimate');
-    window.location.reload();
+    // Rensa ALLT från localStorage
+    localStorage.clear();
+    
+    // Sätt en flagga för att indikera reset
+    sessionStorage.setItem('wasReset', 'true');
+    
+    // Tvinga hård omladdning från servern (inte cache)
+    window.location.href = window.location.href.split('?')[0] + '?reset=' + Date.now();
   }
+}
+
+// Kolla om vi kommer från en reset
+if (sessionStorage.getItem('wasReset') === 'true') {
+  sessionStorage.removeItem('wasReset');
+  // Se till att inget gammalt data finns kvar
+  localStorage.clear();
 }
 
 /* ==================== OFFLINE INCOME ==================== */
@@ -791,33 +804,42 @@ function selectCity(key) {
   saveGame();
 }
 
-/* ==================== ROUTES ==================== */
+/* ==================== ROUTES - NU EFTER KÖP ==================== */
 function renderRoutes() {
   const container = document.getElementById('routeButtons');
   container.innerHTML = '';
   routes.forEach(r => {
     const btn = document.createElement('button');
     btn.className = `route-btn ${game.selectedRoute === r.id ? 'active' : ''}`;
-    btn.innerHTML = `<b>${r.name}</b><br><small>${r.mult}x | ${r.time}s</small>`;
+    btn.innerHTML = `<b>${r.name}</b><br><small>${r.mult}x belöning | ${r.time}s</small>`;
     btn.onclick = () => selectRoute(r.id);
     container.appendChild(btn);
   });
 }
 
 function selectRoute(id) {
+  // Om vi redan har en rutt vald, varna om att vi byter
+  if (game.selectedRoute && game.selectedRoute !== id) {
+    if (!confirm('Byta rutt? Dina lastbilar kommer börja köra på den nya rutten.')) {
+      return;
+    }
+  }
+  
   game.selectedRoute = id;
   renderRoutes();
-  addLog(`🛣️ Rutt: ${routes.find(r => r.id === id).name}`);
+  addLog(`🛣️ Rutt vald: ${routes.find(r => r.id === id).name}`);
   
-  // Skicka ut befintliga lastbilar på den nya rutten
+  // Skicka UT ALLA befintliga lastbilar direkt på den nya rutten!
   if (totalTrucks() > 0) {
     Object.keys(trucks).forEach(type => {
       for (let i = 0; i < trucks[type].count; i++) {
-        setTimeout(() => sendTruckOnRoute(type), i * 300);
+        // Skicka ut direkt utan fördröjning!
+        sendTruckOnRoute(type);
       }
     });
-    addLog(`🚛 Skickade ut ${totalTrucks()} lastbilar!`);
+    addLog(`🚛 ${totalTrucks()} lastbilar skickade ut!`);
   }
+  
   updateUI();
 }
 
@@ -858,12 +880,12 @@ function buyTruck(type) {
     t.cost = Math.floor(t.cost * 1.5);
     addLog(`🚛 Köpte ${t.name}`);
     
-    // VIKTIGT: Skicka ut direkt om rutt är vald!
+    // Om rutt är vald, skicka UT DIREKT!
     if (game.selectedRoute) {
       sendTruckOnRoute(type);
-      addLog(`🚀 Skickad på ${routes.find(r => r.id === game.selectedRoute).name}!`);
+      addLog(`🚀 Skickad ut direkt!`);
     } else {
-      addLog(`⚠️ Välj en rutt för att tjäna pengar!`);
+      addLog(`⚠️ Välj en rutt för att börja tjäna pengar!`);
     }
     
     renderTrucks();
@@ -891,7 +913,7 @@ function upgradeTruck(type) {
   }
 }
 
-/* ==================== TRUCK MOVEMENT & INKOMST ==================== */
+/* ==================== TRUCK MOVEMENT - DIREKT UT ==================== */
 function sendTruckOnRoute(type) {
   if (!game.selectedRoute) return;
   
@@ -902,11 +924,9 @@ function sendTruckOnRoute(type) {
   const target = targets[Math.floor(Math.random() * targets.length)];
   const id = ++truckIdCounter;
   
-  // Beräkna vinst baserat på rutt och stad
+  // Beräkna vinst
   const baseEarnings = trucks[type].base * trucks[type].efficiency;
-  const routeMult = route.mult;
-  const cityMult = cities[target].mult;
-  const totalEarnings = Math.floor(baseEarnings * routeMult * cityMult * 10); // Multiplicera för att få rimliga summor
+  const totalEarnings = Math.floor(baseEarnings * route.mult * cities[target].mult * 10);
   
   const entity = {
     id,
@@ -919,9 +939,8 @@ function sendTruckOnRoute(type) {
   };
   
   activeTrucks.push(entity);
-  addLog(`🚛 ${trucks[type].name} → ${cities[target].name} ($${totalEarnings})`);
   
-  // Visa på karta
+  // Visa på karta direkt
   const container = document.getElementById('map-container');
   const div = document.createElement('div');
   div.className = 'truck-entity';
@@ -932,13 +951,13 @@ function sendTruckOnRoute(type) {
   div.onclick = () => showTruckDetails(entity);
   container.appendChild(div);
   
-  // Animering
-  setTimeout(() => {
+  // Starta animation direkt
+  requestAnimationFrame(() => {
     div.style.transition = `all ${entity.duration}ms linear`;
     div.style.left = cities[target].x + '%';
     div.style.top = cities[target].y + '%';
     div.classList.add('moving');
-  }, 50);
+  });
   
   // Markera väg
   const road = document.getElementById(`road-${game.currentCity}-${target}`) || document.getElementById(`road-${target}-${game.currentCity}`);
@@ -1012,42 +1031,42 @@ function startManagerLoop() {
   }, 3000);
 }
 
-/* ==================== GAME LOOP - HÄR TJÄNAR DU PENGAR! ==================== */
+/* ==================== GAME LOOP ==================== */
 function startGameLoop() {
   setInterval(() => {
     const now = Date.now();
     
-    // Kolla vilka lastbilar som kommit fram - HÄR FÅR DU PENGAR!
+    // Kolla vilka som kommit fram - FÅ PENGAR!
     activeTrucks = activeTrucks.filter(t => {
       if (now >= t.startTime + t.duration) {
-        // LASTBILEN ÄR FRAMME - FÅ PENGAR!
+        // PENGAR!
         game.money += t.earnings;
         game.totalEarned += t.earnings;
         game.totalDeliveries++;
         
-        // Ta bort från kartan
+        // Ta bort från karta
         const el = document.getElementById(`truck-${t.id}`);
         if (el) {
           el.style.transform = 'translate(-50%, -50%) scale(0)';
           setTimeout(() => el.remove(), 300);
         }
         
-        addLog(`✅ Leverans klar! +$${t.earnings}`);
+        addLog(`✅ +$${t.earnings} från ${cities[t.to].name}`);
         
-        // Risk för problem
+        // Risk
         const route = routes.find(r => r.id === game.selectedRoute);
         if (route && Math.random() < route.risk) {
           const penalty = Math.floor(t.earnings * 0.2);
           game.money -= penalty;
-          addLog(`🚨 Problem! -$${penalty} i reparation`);
+          addLog(`🚨 Problem! -$${penalty}`);
         }
         
-        // Skicka ut igen automatiskt (loopa!)
-        setTimeout(() => sendTruckOnRoute(t.type), 1000);
+        // Skicka ut igen direkt!
+        setTimeout(() => sendTruckOnRoute(t.type), 500);
         
-        return false; // Ta bort från array
+        return false;
       }
-      return true; // Fortsätt åka
+      return true;
     });
     
     // Level up
@@ -1059,7 +1078,7 @@ function startGameLoop() {
     
     updateUI();
     saveGame();
-  }, 1000); // Kolla varje sekund
+  }, 1000);
 }
 
 function startAnimationLoop() {
@@ -1128,7 +1147,7 @@ function updateUI() {
   document.getElementById('income').textContent = formatMoney(calculateIncome());
   document.getElementById('level').textContent = game.level;
   document.getElementById('cityName').textContent = cities[game.currentCity].name;
-  document.getElementById('activeRoute').textContent = game.selectedRoute ? routes.find(r => r.id === game.selectedRoute).name : 'Välj rutt';
+  document.getElementById('activeRoute').textContent = game.selectedRoute ? routes.find(r => r.id === game.selectedRoute).name : 'Ingen (välj efter köp)';
   document.getElementById('totalTrucks').textContent = totalTrucks();
   document.getElementById('totalRoutes').textContent = game.totalDeliveries;
   document.getElementById('totalEarned').textContent = formatMoney(Math.floor(game.totalEarned));
